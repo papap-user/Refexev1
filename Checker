@@ -1,0 +1,82 @@
+-- LocalScript | StarterPlayerScripts
+
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local mouse = player:GetMouse()
+
+-- ================= WAIT FOR CHARACTER =================
+local function setupCheckerTool()
+	local character = player.Character or player.CharacterAdded:Wait()
+	local backpack = player:WaitForChild("Backpack")
+
+	if backpack:FindFirstChild("Checker") then return end
+	local tool = Instance.new("Tool")
+	tool.Name = "Checker"
+	tool.RequiresHandle = false
+	tool.Parent = backpack
+
+	-- ================= CREATE GUI =================
+	local playerGui = player:WaitForChild("PlayerGui")
+	local screenGui = Instance.new("ScreenGui")
+	screenGui.Name = "CheckerGUI"
+	screenGui.ResetOnSpawn = false
+	screenGui.Parent = playerGui
+
+	local mainFrame = Instance.new("Frame")
+	mainFrame.Name = "MainFrame"
+	mainFrame.Size = UDim2.new(0, 200, 0, 100)
+	mainFrame.Position = UDim2.new(0, 10, 0.5, -50)
+	mainFrame.BackgroundColor3 = Color3.new(0, 0, 0)
+	mainFrame.BackgroundTransparency = 0
+	mainFrame.Visible = false -- GUI awalnya hidden
+	mainFrame.Parent = screenGui
+
+	local titleLabel = Instance.new("TextLabel")
+	titleLabel.Size = UDim2.new(1, 0, 0, 25)
+	titleLabel.Position = UDim2.new(0, 0, 0, 0)
+	titleLabel.BackgroundTransparency = 1
+	titleLabel.Text = "Name"
+	titleLabel.Font = Enum.Font.SourceSansBold
+	titleLabel.TextSize = 20
+	titleLabel.TextColor3 = Color3.new(1, 1, 1)
+	titleLabel.Parent = mainFrame
+
+	local outputLabel = Instance.new("TextLabel")
+	outputLabel.Size = UDim2.new(1, 0, 1, -25)
+	outputLabel.Position = UDim2.new(0, 0, 0, 25)
+	outputLabel.BackgroundTransparency = 1
+	outputLabel.Text = "checker"
+	outputLabel.Font = Enum.Font.SourceSans
+	outputLabel.TextSize = 18
+	outputLabel.TextColor3 = Color3.new(1, 1, 1)
+	outputLabel.TextWrapped = true
+	outputLabel.Parent = mainFrame
+
+	-- ================= TOOL FUNCTIONALITY =================
+	tool.Equipped:Connect(function()
+		-- saat tool dipegang, GUI siap muncul saat klik
+	end)
+
+	tool.Unequipped:Connect(function()
+		-- saat tool dilepas, GUI otomatis disembunyikan
+		mainFrame.Visible = false
+	end)
+
+	-- klik objek hanya aktif jika tool sedang dipegang
+	mouse.Button1Down:Connect(function()
+		if tool.Parent ~= character then return end -- hanya jika tool di-hold
+		local target = mouse.Target
+		if target and (target:IsA("BasePart") or target:IsA("MeshPart") or target:IsA("Model")) then
+			mainFrame.Visible = true
+			outputLabel.Text = target.Name
+		end
+	end)
+end
+
+-- jalankan setup saat spawn pertama
+setupCheckerTool()
+
+-- jalankan lagi jika respawn
+player.CharacterAdded:Connect(function()
+	setupCheckerTool()
+end)
