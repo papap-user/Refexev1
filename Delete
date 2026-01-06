@@ -1,17 +1,18 @@
 -- LocalScript | StarterPlayerScripts
-
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
 
 local player = Players.LocalPlayer
-local mouse = player:GetMouse()
+local camera = Workspace.CurrentCamera
 
 -- ================= GUI =================
 local gui = Instance.new("ScreenGui")
 gui.Name = "DeleteToolGui"
+gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
--- Confirm Frame kiri
+-- Confirm Frame
 local confirmGui = Instance.new("Frame")
 confirmGui.Size = UDim2.fromScale(0.25, 0.18)
 confirmGui.Position = UDim2.fromScale(0.02, 0.4)
@@ -19,7 +20,6 @@ confirmGui.BackgroundColor3 = Color3.fromRGB(25,25,25)
 confirmGui.Visible = false
 confirmGui.Parent = gui
 
--- Rounded frame + stroke
 local frameCorner = Instance.new("UICorner")
 frameCorner.CornerRadius = UDim.new(0,10)
 frameCorner.Parent = confirmGui
@@ -37,7 +37,7 @@ title.BackgroundTransparency = 1
 title.TextColor3 = Color3.new(1,1,1)
 title.Parent = confirmGui
 
--- ================= FUNCTION CREATE BUTTON =================
+-- ================= BUTTON FUNCTION =================
 local function createButton(parent, size, position, bgColor, text)
 	local btn = Instance.new("TextButton")
 	btn.Size = size
@@ -48,12 +48,11 @@ local function createButton(parent, size, position, bgColor, text)
 
 	local bg = Instance.new("Frame")
 	bg.Size = UDim2.fromScale(1,1)
-	bg.Position = UDim2.new(0,0,0,0)
 	bg.BackgroundColor3 = bgColor
 	bg.Parent = btn
 
 	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 10)
+	corner.CornerRadius = UDim.new(0,10)
 	corner.Parent = bg
 
 	local stroke = Instance.new("UIStroke")
@@ -72,14 +71,13 @@ local function createButton(parent, size, position, bgColor, text)
 	return btn
 end
 
--- CANCEL & SURE buttons
 local cancelBtn = createButton(confirmGui, UDim2.fromScale(0.45,0.35), UDim2.fromScale(0.03,0.55), Color3.fromRGB(200,0,0), "CANCEL")
-local sureBtn = createButton(confirmGui, UDim2.fromScale(0.45,0.35), UDim2.fromScale(0.52,0.55), Color3.fromRGB(0,200,0), "SURE")
+local sureBtn   = createButton(confirmGui, UDim2.fromScale(0.45,0.35), UDim2.fromScale(0.52,0.55), Color3.fromRGB(0,200,0), "SURE")
 
 -- ================= VARIABLES =================
 local tool
 local selectedTarget
-local originalColors = {} -- table untuk nyimpen warna asli tiap objek
+local originalColors = {}
 local holdingTool = false
 
 -- ================= CREATE TOOL =================
@@ -88,30 +86,20 @@ local function createTool()
 	tool = Instance.new("Tool")
 	tool.Name = "DELETE"
 	tool.RequiresHandle = false
-
-	if player.Character then
-		tool.Parent = player.Backpack
-	else
-		player.CharacterAdded:Wait()
-		tool.Parent = player.Backpack
-	end
+	tool.Parent = player:WaitForChild("Backpack")
 end
 
 createTool()
 
--- ================= RESET TARGET =================
+-- ================= RESET =================
 local function resetTarget()
-	if selectedTarget then
-		if originalColors[selectedTarget] then
-			selectedTarget.Color = originalColors[selectedTarget]
-			originalColors[selectedTarget] = nil
-		end
+	if selectedTarget and originalColors[selectedTarget] then
+		selectedTarget.Color = originalColors[selectedTarget]
 	end
 	selectedTarget = nil
 	confirmGui.Visible = false
 end
 
--- ================= TOOL HOLD DETECTION =================
 tool.Equipped:Connect(function()
 	holdingTool = true
 end)
@@ -121,31 +109,36 @@ tool.Unequipped:Connect(function()
 	resetTarget()
 end)
 
--- ================= DELETE LOGIC =================
-UserInputService.InputBegan:Connect(function(input, gp)
+-- ================= ANDROID TOUCH RAYCAST =================
+local function getTargetFromTouch(screenPos)
+	local ray = camera:ScreenPointToRay(screenPos.X, screenPos.Y)
+	local params = RaycastParams.new()
+	params.FilterDescendantsInstances = {player.Character}
+	params.FilterType = Enum.RaycastFilterType.Blacklist
+
+	local result = Workspace:Raycast(ray.Origin, ray.Direction * 500, params)
+	if result and result.Instance and result.Instance:IsA("BasePart") then
+		return result.Instance
+	end
+end
+
+UserInputService.TouchStarted:Connect(function(input, gp)
 	if gp then return end
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then
-		if holdingTool then
-			local target = mouse.Target
-			if target and target:IsA("BasePart") then
-				-- reset warna objek sebelumnya
-				if selectedTarget and selectedTarget ~= target then
-					if originalColors[selectedTarget] then
-						selectedTarget.Color = originalColors[selectedTarget]
-						originalColors[selectedTarget] = nil
-					end
-				end
+	if not holdingTool then return end
 
-				selectedTarget = target
-				-- simpan warna asli cuma sekali
-				if not originalColors[target] then
-					originalColors[target] = target.Color
-				end
-
-				target.Color = Color3.fromRGB(255,0,0) -- penanda
-				confirmGui.Visible = true
+	local target = getTargetFromTouch(input.Position)
+	if target then
+		if selectedTarget and selectedTarget ~= target then
+			if originalColors[selectedTarget] then
+				selectedTarget.Color = originalColors[selectedTarget]
 			end
 		end
+
+		selectedTarget = target
+		originalColors[target] = originalColors[target] or target.Color
+		target.Color = Color3.fromRGB(255,0,0)
+
+		confirmGui.Visible = true
 	end
 end)
 
