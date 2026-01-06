@@ -1,0 +1,101 @@
+-- ESP PLAYER (LocalScript style)
+-- Delta Executor compatible
+-- Nama = PUTIH | Health = HIJAU
+
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local LocalPlayer = Players.LocalPlayer
+
+-- ================= CONFIG =================
+local ESP_COLOR = Color3.fromRGB(255, 0, 0)
+local FILL_TRANSPARENCY = 0.65
+local OUTLINE_TRANSPARENCY = 0.2
+local TEXT_SIZE = 14
+
+local NAME_COLOR = Color3.fromRGB(255, 255, 255) -- putih
+local HEALTH_COLOR = Color3.fromRGB(0, 255, 0)  -- hijau
+-- ==========================================
+
+local function createESP(player)
+	if player == LocalPlayer then return end
+
+	local function onCharacter(char)
+		if char:FindFirstChild("ESP_Highlight") then return end
+		local humanoid = char:WaitForChild("Humanoid", 5)
+		local head = char:WaitForChild("Head", 5)
+		if not humanoid or not head then return end
+
+		-- ===== Highlight (tembus tembok) =====
+		local highlight = Instance.new("Highlight")
+		highlight.Name = "ESP_Highlight"
+		highlight.Adornee = char
+		highlight.FillColor = ESP_COLOR
+		highlight.OutlineColor = ESP_COLOR
+		highlight.FillTransparency = 1
+		highlight.OutlineTransparency = 1
+		highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+		highlight.Parent = char
+
+		TweenService:Create(
+			highlight,
+			TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+			{
+				FillTransparency = FILL_TRANSPARENCY,
+				OutlineTransparency = OUTLINE_TRANSPARENCY
+			}
+		):Play()
+
+		-- ===== Billboard =====
+		local billboard = Instance.new("BillboardGui")
+		billboard.Name = "ESP_Billboard"
+		billboard.Adornee = head
+		billboard.Size = UDim2.new(0, 220, 0, 45)
+		billboard.StudsOffset = Vector3.new(0, 2.8, 0)
+		billboard.AlwaysOnTop = true
+		billboard.Parent = char
+
+		-- ===== Nickname (PUTIH) =====
+		local nameLabel = Instance.new("TextLabel")
+		nameLabel.BackgroundTransparency = 1
+		nameLabel.Size = UDim2.new(1, 0, 0.5, 0)
+		nameLabel.Position = UDim2.new(0, 0, 0, 0)
+		nameLabel.Font = Enum.Font.GothamBold
+		nameLabel.TextSize = TEXT_SIZE
+		nameLabel.TextColor3 = NAME_COLOR
+		nameLabel.TextStrokeTransparency = 0
+		nameLabel.Text = player.Name
+		nameLabel.Parent = billboard
+
+		-- ===== Health (HIJAU) =====
+		local healthLabel = Instance.new("TextLabel")
+		healthLabel.BackgroundTransparency = 1
+		healthLabel.Size = UDim2.new(1, 0, 0.5, 0)
+		healthLabel.Position = UDim2.new(0, 0, 0.5, 0)
+		healthLabel.Font = Enum.Font.GothamBold
+		healthLabel.TextSize = TEXT_SIZE - 1
+		healthLabel.TextColor3 = HEALTH_COLOR
+		healthLabel.TextStrokeTransparency = 0
+		healthLabel.Text = "HP : " .. math.floor(humanoid.Health)
+		healthLabel.Parent = billboard
+
+		-- Update health realtime
+		humanoid.HealthChanged:Connect(function(hp)
+			if healthLabel then
+				healthLabel.Text = "HP : " .. math.floor(hp)
+			end
+		end)
+	end
+
+	if player.Character then
+		onCharacter(player.Character)
+	end
+	player.CharacterAdded:Connect(onCharacter)
+end
+
+-- Existing players
+for _, plr in ipairs(Players:GetPlayers()) do
+	createESP(plr)
+end
+
+-- New players
+Players.PlayerAdded:Connect(createESP)
