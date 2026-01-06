@@ -1,0 +1,89 @@
+-- FPS BOOSTER | FRAME + MESH OPTIMIZER
+-- Delta Executor | Client-side only
+-- No GUI | Auto Execute | No FastFlag
+
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local Lighting = game:GetService("Lighting")
+local LocalPlayer = Players.LocalPlayer
+
+-- ================= LIGHTING LOW =================
+pcall(function()
+	Lighting.GlobalShadows = false
+	Lighting.FogEnd = 9e9
+	Lighting.Brightness = 0
+	Lighting.EnvironmentDiffuseScale = 0
+	Lighting.EnvironmentSpecularScale = 0
+end)
+
+for _, v in ipairs(Lighting:GetChildren()) do
+	if v:IsA("PostEffect") or v:IsA("Atmosphere") or v:IsA("Sky") then
+		v:Destroy()
+	end
+end
+
+-- ================= WORLD OPTIMIZATION =================
+for _, obj in ipairs(Workspace:GetDescendants()) do
+
+	-- BasePart (reduce render cost)
+	if obj:IsA("BasePart") then
+		obj.Material = Enum.Material.Plastic
+		obj.Reflectance = 0
+		obj.CastShadow = false
+
+	-- MeshPart (BIANG FPS DROP)
+	elseif obj:IsA("MeshPart") then
+		obj.Material = Enum.Material.Plastic
+		obj.Reflectance = 0
+		obj.CastShadow = false
+		obj.RenderFidelity = Enum.RenderFidelity.Performance
+		obj.CollisionFidelity = Enum.CollisionFidelity.Box
+
+	-- SpecialMesh (old mesh)
+	elseif obj:IsA("SpecialMesh") then
+		obj.Scale = Vector3.new(0.7, 0.7, 0.7) -- ringanin render
+		obj.MeshType = Enum.MeshType.Brick
+
+	-- Texture / Decal
+	elseif obj:IsA("Decal") or obj:IsA("Texture") then
+		obj.Transparency = 1
+
+	-- Effect berat
+	elseif obj:IsA("ParticleEmitter")
+	or obj:IsA("Trail")
+	or obj:IsA("Beam")
+	or obj:IsA("Fire")
+	or obj:IsA("Smoke")
+	or obj:IsA("Sparkles") then
+		obj.Enabled = false
+	end
+end
+
+-- ================= CHARACTER OPTIMIZE =================
+local function optimizeChar(char)
+	for _, v in ipairs(char:GetDescendants()) do
+		if v:IsA("MeshPart") then
+			v.RenderFidelity = Enum.RenderFidelity.Performance
+			v.Material = Enum.Material.Plastic
+			v.CastShadow = false
+		elseif v:IsA("Decal") or v:IsA("Texture") then
+			v.Transparency = 1
+		elseif v:IsA("BasePart") then
+			v.Material = Enum.Material.Plastic
+			v.CastShadow = false
+		end
+	end
+end
+
+if LocalPlayer.Character then
+	optimizeChar(LocalPlayer.Character)
+end
+LocalPlayer.CharacterAdded:Connect(optimizeChar)
+
+-- ================= QUALITY LEVEL =================
+settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+pcall(function()
+	game:GetService("UserSettings")
+	:GetService("UserGameSettings")
+	.SavedQualityLevel = Enum.SavedQualitySetting.QualityLevel1
+end)
